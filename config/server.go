@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/cobratbq/flagtag"
 )
 
@@ -13,13 +15,25 @@ type servercfg struct {
 type ServerConfig interface {
 	ListenAddr() string
 	Debug() bool
+	Validate() error
 }
 
 // LoadServerConfigFromArgs ...
-func LoadServerConfigFromArgs(args []string) ServerConfig {
+func LoadServerConfigFromArgs(args []string) (ServerConfig, error) {
 	var c servercfg
-	flagtag.MustConfigureAndParse(&c)
-	return &c
+	flagtag.MustConfigureAndParseArgs(&c, args)
+	if err := c.Validate(); err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+// Validate validates config
+func (c *servercfg) Validate() error {
+	if c.listenAddr == "" {
+		return fmt.Errorf("Need to provide listen-addr")
+	}
+	return nil
 }
 
 // ListenAddr ...

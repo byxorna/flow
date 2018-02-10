@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/cobratbq/flagtag"
@@ -17,13 +18,30 @@ type EtcdConfig interface {
 	Endpoints() []string
 	Prefix() string
 	ToEtcdConfig() client.Config
+	Validate() error
 }
 
 // LoadEtcdConfigFromArgs ...
-func LoadEtcdConfigFromArgs(args []string) EtcdConfig {
+func LoadEtcdConfigFromArgs(args []string) (EtcdConfig, error) {
 	var c etcdcfg
-	flagtag.MustConfigureAndParse(&c)
-	return &c
+	flagtag.MustConfigureAndParseArgs(&c, args)
+
+	err := c.Validate()
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+// Validate validates config
+func (c *etcdcfg) Validate() error {
+	if len(c.endpoints) < 1 {
+		return fmt.Errorf("Need to provide etcd-endpoints")
+	}
+	if c.prefix == "" {
+		return fmt.Errorf("Need to provide valid etcd-prefix")
+	}
+	return nil
 }
 
 // Endpoints ...
