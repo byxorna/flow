@@ -1,0 +1,4 @@
+.gopath~/
+vendor/
+bin/
+*.swp
