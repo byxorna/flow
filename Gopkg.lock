@@ -14,12 +14,6 @@
   revision = "e80c3b7ed292b052c7083b6fd7154a8422c33f65"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/cobratbq/flagtag"
-  packages = ["."]
-  revision = "b2b9cdc54362477b052a2538bc1f1de44a8b2192"
-
-[[projects]]
   name = "github.com/coreos/etcd"
   packages = [
     "client",
@@ -67,6 +61,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "dcd09de6160e00b4eb4447756c855358f9b1ec625792baf2d63b0f8920b0e905"
+  inputs-digest = "72846f74284fc1b8ea7ad1e65baf31ad47c2343ad6e3210bafcdfc720d5e0fe0"
   solver-name = "gps-cdcl"
   solver-version = 1

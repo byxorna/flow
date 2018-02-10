@@ -31,21 +31,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	/*
-		servercfg, err := config.LoadServerConfigFromArgs(os.Args[1:])
-		if err != nil {
-			log.Fatal(err)
-		}
-		etcdcfg, err := config.LoadEtcdConfigFromArgs(os.Args[1:])
-		if err != nil {
-			log.Fatal(err)
-		}
-	*/
-
-	//TODO make `-h` output work with the flagtags
-	//use flagset maybe?
-
-	fmt.Printf("%v\n", cfg)
+	//fmt.Printf("%v\n", cfg)
 	s, err := server.New(cfg)
 	if err != nil {
 		log.Fatal(err)
