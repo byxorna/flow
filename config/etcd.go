@@ -4,56 +4,30 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cobratbq/flagtag"
 	"github.com/coreos/etcd/client"
 )
 
-type etcdcfg struct {
-	endpoints []string `yaml:"etcd-endpoints",flag:"endpoints,,etcd endpoints for storage"`
-	prefix    string   `yaml:"etcd-prefix",flag:"etcd-prefix,/,etcd prefix for storage"`
-}
-
 // EtcdConfig ...
-type EtcdConfig interface {
-	Endpoints() []string
-	Prefix() string
-	ToEtcdConfig() client.Config
-	Validate() error
+type EtcdConfig struct {
+	EtcdEndpoints []string `yaml:"etcd-endpoints" arg:"--etcd-endpoints,required" help:"etcd endpoints for storage"`
+	EtcdPrefix    string   `yaml:"etcd-prefix" arg:"--etcd-prefix" help:"etcd prefix for storage"`
 }
 
-// LoadEtcdConfigFromArgs ...
-func LoadEtcdConfigFromArgs(args []string) (EtcdConfig, error) {
-	var c etcdcfg
-	flagtag.MustConfigureAndParseArgs(&c, args)
-
-	err := c.Validate()
-	if err != nil {
-		return nil, err
-	}
-	return &c, nil
-}
-
-// Validate validates config
-func (c *etcdcfg) Validate() error {
-	if len(c.endpoints) < 1 {
+// ValidateAndSetEtcdDefaults validates config, and sets defaults if possible
+func (c *EtcdConfig) ValidateAndSetEtcdDefaults() error {
+	if len(c.EtcdEndpoints) < 1 {
 		return fmt.Errorf("Need to provide etcd-endpoints")
 	}
-	if c.prefix == "" {
-		return fmt.Errorf("Need to provide valid etcd-prefix")
+	if c.EtcdPrefix == "" {
+		c.EtcdPrefix = "/"
 	}
 	return nil
 }
 
-// Endpoints ...
-func (c *etcdcfg) Endpoints() []string { return c.endpoints }
-
-// Prefix ...
-func (c *etcdcfg) Prefix() string { return c.prefix }
-
-// ToEtcdConfig ...
-func (c *etcdcfg) ToEtcdConfig() client.Config {
+// ToEtcdConfig returns a etcd client Config structure
+func (c *EtcdConfig) ToEtcdConfig() client.Config {
 	x := client.Config{
-		Endpoints:               c.endpoints,
+		Endpoints:               c.EtcdEndpoints,
 		Transport:               client.DefaultTransport,
 		HeaderTimeoutPerRequest: time.Second,
 	}

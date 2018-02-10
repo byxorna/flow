@@ -1,5 +1,13 @@
 # Flow - Periodic Job Execution
 
+super WIP. just throwing things at the wall and seeing if something sticks. I am unhappy
+with the design of airflow, and wanted to try my hand at something
+
+* more container native
+* more extensible
+  * supports arbitrary executors like k8s, mesos, mapreduce, etc
+* keeps business logic out of job definitions
+
 
 # Notes
 

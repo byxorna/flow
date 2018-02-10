@@ -16,10 +16,10 @@ var (
 )
 
 type svr struct {
-	mux          *http.ServeMux
-	ServerConfig config.ServerConfig
-	EtcdClient   etcd.Client
-	KeysAPI      etcd.KeysAPI
+	config.Config
+	mux        *http.ServeMux
+	EtcdClient etcd.Client
+	KeysAPI    etcd.KeysAPI
 }
 
 // Server ...
@@ -28,8 +28,8 @@ type Server interface {
 }
 
 // New returns a new server
-func New(sc config.ServerConfig, ec config.EtcdConfig) (Server, error) {
-	etcdClient, err := etcd.New(ec.ToEtcdConfig())
+func New(c config.Config) (Server, error) {
+	etcdClient, err := etcd.New(c.ToEtcdConfig())
 	if err != nil {
 		return nil, err
 	}
@@ -37,10 +37,10 @@ func New(sc config.ServerConfig, ec config.EtcdConfig) (Server, error) {
 	mux := http.NewServeMux()
 
 	s := svr{
-		mux:          mux,
-		KeysAPI:      etcd.NewKeysAPIWithPrefix(etcdClient, ec.Prefix()),
-		ServerConfig: sc,
-		EtcdClient:   etcdClient,
+		Config:     c,
+		mux:        mux,
+		KeysAPI:    etcd.NewKeysAPIWithPrefix(etcdClient, c.EtcdPrefix),
+		EtcdClient: etcdClient,
 	}
 
 	// register http handlers
@@ -51,8 +51,8 @@ func New(sc config.ServerConfig, ec config.EtcdConfig) (Server, error) {
 
 // ListenAndServe calls http.ListenAndServe
 func (s *svr) ListenAndServe() error {
-	log.Infof("Listening on %s", s.ServerConfig.ListenAddr())
-	return http.ListenAndServe(s.ServerConfig.ListenAddr(), s.mux)
+	log.Infof("Listening on %s", s.ServerListenAddr)
+	return http.ListenAndServe(s.ServerListenAddr, s.mux)
 }
 
 func (s *svr) handleVersion(w http.ResponseWriter, r *http.Request) {
