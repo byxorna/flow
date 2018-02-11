@@ -31,6 +31,13 @@ func main() {
 		log.Fatal(err)
 	}
 
+	log.Info("Creating new storage backend")
+	store, err := storage.New(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Infof("Storage backend created: %s", store.String())
+
 	//fmt.Printf("%v\n", cfg)
 	s, err := server.New(cfg)
 	if err != nil {

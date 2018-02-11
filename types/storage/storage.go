@@ -14,6 +14,7 @@ import (
 	"github.com/docker/libkv/store/etcd"
 	"github.com/docker/libkv/store/zookeeper"
 
+	"github.com/byxorna/flow/config"
 	"github.com/byxorna/flow/types/execution"
 	"github.com/byxorna/flow/types/job"
 )
@@ -29,7 +30,7 @@ type Store struct {
 	// Client is the libkv client
 	Client   store.Store
 	keyspace string
-	backend  string
+	backend  store.Backend
 }
 
 func init() {
@@ -38,7 +39,16 @@ func init() {
 	zookeeper.Register()
 }
 
-func NewStore(backend string, machines []string, keyspace string) *Store {
+// New returns a new storage backend
+func New(c config.Config) (*Store, error) {
+	if len(c.EtcdEndpoints) == 0 {
+		return nil, fmt.Errorf("No supported storage backend in Config")
+	}
+	//TODO update this if we wanna support multiple backends. For now, idgaf
+	backend := store.ETCD
+	machines := c.EtcdEndpoints
+	keyspace := c.EtcdPrefix
+
 	s, err := libkv.NewStore(store.Backend(backend), machines, nil)
 	if err != nil {
 		log.Error(err)
@@ -60,6 +70,11 @@ func NewStore(backend string, machines []string, keyspace string) *Store {
 		keyspace: keyspace,
 		backend:  backend,
 	}
+}
+
+// String returns a string for a Store
+func (s *Store) String() string {
+	return fmt.Sprintf("%s %s %s", s.backend, s.keyspace, s.Client.String())
 }
 
 // Store a job
