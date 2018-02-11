@@ -8,3 +8,7 @@ type Executor struct {
 func New() *Executor {
 	return &Executor{}
 }
+
+func (e *Executor) DefaultParameters() Parameters {
+
+}

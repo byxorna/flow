@@ -10,4 +10,5 @@ import (
 type Executor interface {
 	Run(j *job.Spec) error
 	String() string
+	DefaultParameters() (Parameters, error)
 }
