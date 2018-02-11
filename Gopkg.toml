@@ -40,3 +40,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/alexflint/go-arg"
+
+[[constraint]]
+  name = "github.com/docker/libkv"
+  version = "0.2.1"

@@ -32,6 +32,15 @@
   version = "v0.2.0"
 
 [[projects]]
+  name = "github.com/docker/libkv"
+  packages = [
+    ".",
+    "store"
+  ]
+  revision = "aabc039ad04deb721e234f99cd1b4aa28ac71a40"
+  version = "v0.2.1"
+
+[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   revision = "d682213848ed68c0a260ca37d6dd5ace8423f5ba"
@@ -61,6 +70,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "72846f74284fc1b8ea7ad1e65baf31ad47c2343ad6e3210bafcdfc720d5e0fe0"
+  inputs-digest = "0587382e2462000cbf9b5b0027ba64fa96118a0589ccdfd3816216bf311eff30"
   solver-name = "gps-cdcl"
   solver-version = 1
