@@ -245,14 +245,14 @@ func (s *Store) DeleteJob(ns string, name string) (*job.Spec, error) {
 	return j, nil
 }
 
-func (s *Store) GetExecutions(ns string, name string) ([]*execution.Execution, error) {
+func (s *Store) GetExecutions(ns string, name string) ([]*execution.Instance, error) {
 	prefix := fmt.Sprintf("%s/executions/%s/%s", s.keyspace, ns, name)
 	res, err := s.Client.List(prefix)
 	if err != nil {
 		return nil, err
 	}
 
-	var executions []*execution.Execution
+	var executions []*execution.Instance
 
 	for _, node := range res {
 		if store.Backend(s.backend) != store.ZK {
@@ -262,7 +262,7 @@ func (s *Store) GetExecutions(ns string, name string) ([]*execution.Execution, e
 				continue
 			}
 		}
-		var e execution.Execution
+		var e execution.Instance
 		err := json.Unmarshal([]byte(node.Value), &e)
 		if err != nil {
 			return nil, err
@@ -272,16 +272,16 @@ func (s *Store) GetExecutions(ns string, name string) ([]*execution.Execution, e
 	return executions, nil
 }
 
-func (s *Store) GetLastExecutionGroup(ns string, j string) ([]*execution.Execution, error) {
+func (s *Store) GetLastExecutionGroup(ns string, j string) ([]*execution.Instance, error) {
 	res, err := s.Client.List(fmt.Sprintf("%s/executions/%s/%s", s.keyspace, ns, j))
 	if err != nil {
 		return nil, err
 	}
 	if len(res) == 0 {
-		return []*execution.Execution{}, nil
+		return []*execution.Instance{}, nil
 	}
 
-	var ex execution.Execution
+	var ex execution.Instance
 	err = json.Unmarshal([]byte(res[len(res)-1].Value), &ex)
 	if err != nil {
 		return nil, err
@@ -289,15 +289,15 @@ func (s *Store) GetLastExecutionGroup(ns string, j string) ([]*execution.Executi
 	return s.GetExecutionGroup(&ex)
 }
 
-func (s *Store) GetExecutionGroup(e *execution.Execution) ([]*execution.Execution, error) {
+func (s *Store) GetExecutionGroup(e *execution.Instance) ([]*execution.Instance, error) {
 	res, err := s.Client.List(fmt.Sprintf("%s/executions/%s/%s", s.keyspace, e.Namespace, e.Job))
 	if err != nil {
 		return nil, err
 	}
 
-	var executions []*execution.Execution
+	var executions []*execution.Instance
 	for _, node := range res {
-		var ex execution.Execution
+		var ex execution.Instance
 		err := json.Unmarshal([]byte(node.Value), &ex)
 		if err != nil {
 			return nil, err
@@ -312,12 +312,12 @@ func (s *Store) GetExecutionGroup(e *execution.Execution) ([]*execution.Executio
 
 // Returns executions for a job grouped and with an ordered index
 // to facilitate access.
-func (s *Store) GetGroupedExecutions(ns string, j string) (map[int64][]*execution.Execution, []int64, error) {
+func (s *Store) GetGroupedExecutions(ns string, j string) (map[int64][]*execution.Instance, []int64, error) {
 	execs, err := s.GetExecutions(ns, j)
 	if err != nil {
 		return nil, nil, err
 	}
-	groups := make(map[int64][]*execution.Execution)
+	groups := make(map[int64][]*execution.Instance)
 	for _, exec := range execs {
 		groups[exec.Group] = append(groups[exec.Group], exec)
 	}
@@ -333,7 +333,7 @@ func (s *Store) GetGroupedExecutions(ns string, j string) (map[int64][]*executio
 }
 
 // Save a new execution and returns the key of the new saved item or an error.
-func (s *Store) SetExecution(e *execution.Execution) (string, error) {
+func (s *Store) SetExecution(e *execution.Instance) (string, error) {
 	exJson, _ := json.Marshal(e)
 	key := e.Key()
 

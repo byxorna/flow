@@ -7,7 +7,7 @@ import (
 	"github.com/byxorna/flow/types/job"
 )
 
-type Execution struct {
+type Instance struct {
 	// Job name of the job this executions refers to.
 	Job string `json:"job_name,omitempty"`
 	// Namespace of the job this executions refers to.
@@ -35,9 +35,9 @@ type Execution struct {
 	Attempt uint `json:"attempt,omitempty"`
 }
 
-// New returns a new Execution instance
-func New(j *job.Spec) *Execution {
-	return &Execution{
+// NewInstance returns a new execution.Instance
+func NewInstance(j *job.Spec) *Instance {
+	return &Instance{
 		Job:       j.Name,
 		Namespace: j.Namespace,
 		Group:     time.Now().UnixNano(),
@@ -46,7 +46,7 @@ func New(j *job.Spec) *Execution {
 }
 
 // Used to enerate the execution Id
-func (e *Execution) Key() string {
+func (e *Instance) Key() string {
 	// TODO does this require some randomness?
 	return fmt.Sprintf("%s-%s-%d", e.Namespace, e.Job, e.StartedAt.UnixNano())
 }
