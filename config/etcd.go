@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/coreos/etcd/client"
+	"github.com/docker/libkv/store"
 )
 
 // EtcdConfig ...
@@ -24,12 +24,12 @@ func (c *EtcdConfig) ValidateAndSetEtcdDefaults() error {
 	return nil
 }
 
-// ToEtcdConfig returns a etcd client Config structure
-func (c *EtcdConfig) ToEtcdConfig() client.Config {
-	x := client.Config{
-		Endpoints:               c.EtcdEndpoints,
-		Transport:               client.DefaultTransport,
-		HeaderTimeoutPerRequest: time.Second,
+// ToEtcdConfig returns a etcd client Config structure for libkv
+func (c *EtcdConfig) ToLibKVConfig() store.Config {
+	return store.Config{
+		ClientTLS:         nil,
+		TLS:               nil,
+		ConnectionTimeout: 1 * time.Second,
+		PersistConnection: true,
 	}
-	return x
 }

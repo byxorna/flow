@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/byxorna/flow/config"
+	"github.com/byxorna/flow/types/storage"
 	"github.com/byxorna/flow/version"
-	etcd "github.com/coreos/etcd/client"
 	"github.com/sirupsen/logrus"
 )
 
@@ -32,9 +32,9 @@ func (lrw loggingResponseWriter) WriteHeader(code int) {
 
 type svr struct {
 	config.Config
-	mux        *http.ServeMux
-	EtcdClient etcd.Client
-	KeysAPI    etcd.KeysAPI
+	mux *http.ServeMux
+	// Store is the backend data access layer (etcd)
+	Store storage.Store
 }
 
 // Server ...
@@ -44,7 +44,7 @@ type Server interface {
 
 // New returns a new server
 func New(c config.Config) (Server, error) {
-	etcdClient, err := etcd.New(c.ToEtcdConfig())
+	store, err := storage.New(c)
 	if err != nil {
 		return nil, err
 	}
@@ -52,10 +52,9 @@ func New(c config.Config) (Server, error) {
 	mux := http.NewServeMux()
 
 	s := svr{
-		Config:     c,
-		mux:        mux,
-		KeysAPI:    etcd.NewKeysAPIWithPrefix(etcdClient, c.EtcdPrefix),
-		EtcdClient: etcdClient,
+		Config: c,
+		mux:    mux,
+		Store:  store,
 	}
 
 	// register http handlers

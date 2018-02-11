@@ -48,8 +48,9 @@ func New(c config.Config) (*Store, error) {
 	backend := store.ETCD
 	machines := c.EtcdEndpoints
 	keyspace := c.EtcdPrefix
+	cfg := c.ToLibKVConfig()
 
-	s, err := libkv.NewStore(store.Backend(backend), machines, nil)
+	s, err := libkv.NewStore(store.Backend(backend), machines, cfg)
 	if err != nil {
 		log.Error(err)
 	}
