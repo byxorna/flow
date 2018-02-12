@@ -26,6 +26,7 @@ var (
 // MaxExecutions is how many executions to retain in the storage backend
 const MaxExecutions = 100
 
+// Store abstracts the DAL
 type Store struct {
 	// Client is the libkv client
 	Client   store.Store
@@ -78,11 +79,11 @@ func (s *Store) String() string {
 	return fmt.Sprintf("%s %s %s", s.backend, s.keyspace, s.Client.String())
 }
 
-// Store a job
+// SetJob Stores a job
 func (s *Store) SetJob(j *job.Spec) error {
 	// Sanitize the job name
 	j.Name = generateSlug(job.Name)
-	jobKey := fmt.Sprintf("%s/jobs/%s", s.keyspace, j.Name)
+	jobKey := j.Path(s.keyspace)
 
 	if err := s.validateJob(j); err != nil {
 		return err
@@ -117,11 +118,8 @@ func (s *Store) SetJob(j *job.Spec) error {
 		"json": string(jobJSON),
 	}).Debug("store: Setting job")
 
-	if err := s.Client.Put(jobKey, jobJSON, nil); err != nil {
-		return err
-	}
-
-	return nil
+	err := s.Client.Put(jobKey, jobJSON, nil)
+	return err
 }
 
 /*
@@ -202,7 +200,7 @@ func (s *Store) validateJob(j *job.Spec) error {
 
 // GetJobs returns all jobs
 func (s *Store) GetJobs() ([]*job.Spec, error) {
-	res, err := s.Client.List(s.keyspace + "/jobs/")
+	res, err := s.Client.List(s.keyspace + "/" + job.StoragePath + "/")
 	if err != nil {
 		if err == store.ErrKeyNotFound {
 			log.Debug("store: No jobs found")
@@ -223,9 +221,9 @@ func (s *Store) GetJobs() ([]*job.Spec, error) {
 	return jobs, nil
 }
 
-// Get a job
+// GetJob ...
 func (s *Store) GetJob(ns string, name string) (*job.Spec, error) {
-	res, err := s.Client.Get(fmt.Sprintf("%s/jobs/%s/%s", s.keyspace, ns, name))
+	res, err := s.Client.Get(job.Prefix(s.keyspace, ns, name))
 	if err != nil {
 		return nil, err
 	}
@@ -242,6 +240,7 @@ func (s *Store) GetJob(ns string, name string) (*job.Spec, error) {
 	return &j, nil
 }
 
+// DeleteJob ...
 func (s *Store) DeleteJob(ns string, name string) (*job.Spec, error) {
 	j, err := s.GetJob(ns, name)
 	if err != nil {
@@ -254,15 +253,16 @@ func (s *Store) DeleteJob(ns string, name string) (*job.Spec, error) {
 		}
 	}
 
-	if err := s.Client.Delete(fmt.Sprintf("%s/jobs/%s/%s", s.keyspace, ns, name)); err != nil {
+	if err := s.Client.Delete(job.Prefix(s.keyspace, ns, name)); err != nil {
 		return nil, err
 	}
 
 	return j, nil
 }
 
+// GetExecutions ...
 func (s *Store) GetExecutions(ns string, name string) ([]*execution.Instance, error) {
-	prefix := fmt.Sprintf("%s/executions/%s/%s", s.keyspace, ns, name)
+	prefix := executions.Path(s.keyspace, ns, name)
 	res, err := s.Client.List(prefix)
 	if err != nil {
 		return nil, err
@@ -288,8 +288,10 @@ func (s *Store) GetExecutions(ns string, name string) ([]*execution.Instance, er
 	return executions, nil
 }
 
+// GetLastExecutionGroup ...
 func (s *Store) GetLastExecutionGroup(ns string, j string) ([]*execution.Instance, error) {
-	res, err := s.Client.List(fmt.Sprintf("%s/executions/%s/%s", s.keyspace, ns, j))
+	prefix := executions.Path(s.keyspace, ns, j)
+	res, err := s.Client.List(prefix)
 	if err != nil {
 		return nil, err
 	}
@@ -305,8 +307,9 @@ func (s *Store) GetLastExecutionGroup(ns string, j string) ([]*execution.Instanc
 	return s.GetExecutionGroup(&ex)
 }
 
+// GetExecutionGroup ...
 func (s *Store) GetExecutionGroup(e *execution.Instance) ([]*execution.Instance, error) {
-	res, err := s.Client.List(fmt.Sprintf("%s/executions/%s/%s", s.keyspace, e.Namespace, e.Job))
+	res, err := s.Client.List(executions.Prefix(s.keyspace, e.Namespace, e.Job))
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +329,7 @@ func (s *Store) GetExecutionGroup(e *execution.Instance) ([]*execution.Instance,
 	return executions, nil
 }
 
-// Returns executions for a job grouped and with an ordered index
+// GetGroupedExecutions Returns executions for a job grouped and with an ordered index
 // to facilitate access.
 func (s *Store) GetGroupedExecutions(ns string, j string) (map[int64][]*execution.Instance, []int64, error) {
 	execs, err := s.GetExecutions(ns, j)
@@ -348,25 +351,31 @@ func (s *Store) GetGroupedExecutions(ns string, j string) (map[int64][]*executio
 	return groups, byGroup, nil
 }
 
-// Save a new execution and returns the key of the new saved item or an error.
+// SetExecution Save a new execution and returns the key of the new saved item or an error.
 func (s *Store) SetExecution(e *execution.Instance) (string, error) {
-	exJson, _ := json.Marshal(e)
-	key := e.Key()
+	exJSON, _ := json.Marshal(e)
 
 	log.WithFields(logrus.Fields{
 		"job":       e.Job,
 		"namespace": e.Namespace,
-		"execution": key,
+		"key":       e.ID,
 	}).Debug("store: Setting key")
 
-	err := s.Client.Put(fmt.Sprintf("%s/executions/%s/%s/%s", s.keyspace, e.Namespace, e.Job, key), exJson, nil)
+	err := s.Client.Put(
+		fmt.Sprintf(
+			"%s/%s",
+			executions.Prefix(s.keyspace, e.Namespace, e.Job),
+			e.ID),
+		exJSON,
+		nil,
+	)
 	if err != nil {
 		return "", err
 	}
 
 	execs, err := s.GetExecutions(e.Namespace, e.Job)
 	if err != nil {
-		log.Errorf("store: No executions found for job %s", execution.JobName)
+		log.Errorf("store: No executions found for job %s/%s", e.Namespace, e.Job)
 	}
 
 	// Get and ordered array of all execution groups
@@ -379,22 +388,28 @@ func (s *Store) SetExecution(e *execution.Instance) (string, error) {
 	// Delete all execution results over the limit, starting from olders
 	if len(byGroup) > MaxExecutions {
 		for i := range byGroup[MaxExecutions:] {
-			err := s.Client.Delete(fmt.Sprintf("%s/executions/%s/%s", s.keyspace, execs[i].JobName, execs[i].Key()))
+			err := s.Client.Delete(
+				fmt.Sprintf(
+					"%s/%s",
+					executions.Prefix(s.keyspace, execs[i].Namespace, execs[i].Job),
+					execs[i].ID,
+				),
+			)
 			if err != nil {
-				log.Errorf("store: Trying to delete overflowed execution %s", execs[i].Key())
+				log.Errorf("store: Trying to delete overflowed execution %s", execs[i].ID)
 			}
 		}
 	}
 
-	return key, nil
+	return e.ID.String(), nil
 }
 
-// Removes all executions of a job
+// DeleteExecutions Removes all executions of a job
 func (s *Store) DeleteExecutions(ns string, j string) error {
-	return s.Client.DeleteTree(fmt.Sprintf("%s/executions/%s/%s", s.keyspace, ns, j))
+	return s.Client.DeleteTree(executions.Prefix(s.keyspace, ns, j))
 }
 
-// Retrieve the leader from the store
+// GetLeader Retrieve the leader from the store
 func (s *Store) GetLeader() []byte {
 	res, err := s.Client.Get(s.LeaderKey())
 	if err != nil {
@@ -411,7 +426,7 @@ func (s *Store) GetLeader() []byte {
 	return res.Value
 }
 
-// Retrieve the leader key used in the KV store to store the leader node
+// LeaderKey Retrieve the leader key used in the KV store to store the leader node
 func (s *Store) LeaderKey() string {
 	return s.keyspace + "/leader"
 }

@@ -1,13 +1,19 @@
 package job
 
+// Status ...
 type Status uint8
 
 const (
+	// Pending ...
 	Pending uint8 = iota
+	// Running ...
 	Running
+	// Success ...
 	Success
+	// Failed ...
 	Failed
-	PartialyFailed
+	// PartiallyFailed ...
+	PartiallyFailed
 )
 
 // Status returns the Spec's status of last run

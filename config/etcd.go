@@ -24,7 +24,7 @@ func (c *EtcdConfig) ValidateAndSetEtcdDefaults() error {
 	return nil
 }
 
-// ToEtcdConfig returns a etcd client Config structure for libkv
+// ToLibKVConfig returns a etcd client Config structure for libkv
 func (c *EtcdConfig) ToLibKVConfig() store.Config {
 	return store.Config{
 		ClientTLS:         nil,

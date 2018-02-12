@@ -1,14 +1,10 @@
 package executor
 
-import (
-	"github.com/byxorna/flow/types/job"
-)
+import ()
 
-// Parameters is interface implemented by executors to define the fields a job
-// can populate to control how a job is to be run by them. i.e. docker container,
-// memory limits, etc
+// Executor ...
 type Executor interface {
-	Run(j *job.Spec) error
+	Run(namespace string, name string) error
 	String() string
 	DefaultParameters() (Parameters, error)
 }

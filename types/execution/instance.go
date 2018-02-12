@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/byxorna/flow/types/job"
+	"github.com/google/uuid"
 )
 
+// Instance is a Job execution instance
 type Instance struct {
 	// Job name of the job this executions refers to.
 	Job string `json:"job_name,omitempty"`
@@ -33,20 +34,32 @@ type Instance struct {
 
 	// Retry attempt of this execution.
 	Attempt uint `json:"attempt,omitempty"`
+
+	// ID is a unique ID of this instance
+	ID uuid.UUID `json:"id,omitempty"`
 }
 
 // NewInstance returns a new execution.Instance
-func NewInstance(j *job.Spec) *Instance {
+func NewInstance(ns string, name string) *Instance {
 	return &Instance{
-		Job:       j.Name,
-		Namespace: j.Namespace,
+		Job:       name,
+		Namespace: ns,
 		Group:     time.Now().UnixNano(),
 		Attempt:   1,
+		ID:        uuid.New(),
 	}
 }
 
-// Used to enerate the execution Id
+// Key is the unique instance of this execution
+/*
 func (e *Instance) Key() string {
-	// TODO does this require some randomness?
-	return fmt.Sprintf("%s-%s-%d", e.Namespace, e.Job, e.StartedAt.UnixNano())
+	// TODO does this require some randomness? need a UUID?
+	//return fmt.Sprintf("%s-%s-%d", e.Namespace, e.Job, e.StartedAt.UnixNano())
+	return e.UUID.String()
+}
+*/
+
+// String ...
+func (e *Instance) String() string {
+	return fmt.Sprintf("%s/%s:%s", e.Namespace, e.Job, e.ID.String())
 }

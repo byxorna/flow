@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Run ...
 func (j *Spec) Run() error {
 	j.running.Lock()
 	defer j.running.Unlock()
@@ -23,7 +24,7 @@ func (j *Spec) Run() error {
 			}).Debug("scheduler: Run job")
 
 			// Simple execution wrapper
-			i := execution.NewInstance(j)
+			i := execution.NewInstance(j.Namespace, j.Name)
 			exe, err := j.GetExecutor()
 			if err != nil {
 				return err
@@ -34,6 +35,7 @@ func (j *Spec) Run() error {
 	}
 }
 
+// GetExecutor ...
 func (j *Spec) GetExecutor() (executor.Executor, error) {
 	switch t := j.Executor; t {
 	case executor.TypeShell:

@@ -10,8 +10,14 @@ import (
 	//	"github.com/byxorna/flow/types/storage"
 )
 
+const (
+	// StoragePath ...
+	StoragePath = "jobs"
+)
+
 var (
-	ErrRequiresSchedule = fmt.Errorf("Job requires either a parent job or a schedule!")
+	// ErrRequiresSchedule ...
+	ErrRequiresSchedule = fmt.Errorf("job requires either a parent job or a schedule")
 )
 
 // Spec is a Job specification that is provided via API
@@ -101,4 +107,14 @@ func (j *Spec) Validate() error {
 	if j.ExecutorParameters == nil {
 		j.ExecutorParameters = j.Executor.DefaultParameters()
 	}
+}
+
+// Path returns the path to a job given a keyspace
+func (j *Spec) Path(keyspace string) string {
+	fmt.Sprintf("%s/%s/%s/%s", keyspace, StoragePath, j.Namespace, j.Name)
+}
+
+// Prefix returns the path to a namespaced job in the storage system
+func Prefix(keyspace, namespace, name string) string {
+	fmt.Sprintf("%s/%s/%s/%s", keyspace, StoragePath, namespace, name)
 }
