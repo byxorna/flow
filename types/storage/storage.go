@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/docker/libkv"
 	"github.com/docker/libkv/store"
 	"github.com/docker/libkv/store/consul"
 	"github.com/docker/libkv/store/etcd"
 	"github.com/docker/libkv/store/zookeeper"
+	"github.com/sirupsen/logrus"
 
 	"github.com/byxorna/flow/config"
 	"github.com/byxorna/flow/types/execution"
