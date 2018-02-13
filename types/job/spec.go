@@ -5,9 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/byxorna/flow/types/executor"
+	"github.com/byxorna/flow/types"
 	"github.com/byxorna/flow/types/schedule"
-	//	"github.com/byxorna/flow/types/storage"
 )
 
 const (
@@ -65,21 +64,18 @@ type Spec struct {
 	Schedule schedule.Interval `json:"schedule"`
 
 	// Executor is Which executor to require (if any)
-	Executor executor.Type `json:"executor"`
+	Executor types.Executor `json:"executor"`
 
 	// ExecutorParameters are attributes passed to executor to define execution
 	// like docker image, entrypoint, memory parameters, etc
-	ExecutorParameters executor.Parameters `json:"executor_parameters"`
-
-	// Labels are labels to identify this job
-	Labels map[string]string `json:"labels"`
+	ExecutorParameters map[string]string `json:"executor_parameters"`
 
 	// ExecutorConstraints are labels that need satisfied by executor to run this job
 	// i.e. specific OS, kernel attributes, etc
 	ExecutorConstraints map[string]string `json:"constraints"`
 
-	// storage is the backend storage
-	//storage storage.Store
+	// Labels are labels to identify this job
+	Labels map[string]string `json:"labels"`
 
 	running sync.Mutex
 }
@@ -101,20 +97,23 @@ func (j *Spec) Validate() error {
 		}
 	}
 
-	if j.Executor == executor.TypeDefault {
-		j.Executor = executor.TypeShell
+	if j.Executor == types.DefaultExecutor {
+		return fmt.Errorf("must specify an explicit executor")
 	}
-	if j.ExecutorParameters == nil {
-		j.ExecutorParameters = j.Executor.DefaultParameters()
-	}
+	return nil
+}
+
+// ID returns the path to a job given a keyspace
+func (j *Spec) ID() string {
+	return fmt.Sprintf("%s/%s", j.Namespace, j.Name)
 }
 
 // Path returns the path to a job given a keyspace
 func (j *Spec) Path(keyspace string) string {
-	fmt.Sprintf("%s/%s/%s/%s", keyspace, StoragePath, j.Namespace, j.Name)
+	return fmt.Sprintf("%s/%s/%s/%s", keyspace, StoragePath, j.Namespace, j.Name)
 }
 
 // Prefix returns the path to a namespaced job in the storage system
 func Prefix(keyspace, namespace, name string) string {
-	fmt.Sprintf("%s/%s/%s/%s", keyspace, StoragePath, namespace, name)
+	return fmt.Sprintf("%s/%s/%s/%s", keyspace, StoragePath, namespace, name)
 }

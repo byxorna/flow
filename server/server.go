@@ -34,7 +34,7 @@ type svr struct {
 	config.Config
 	mux *http.ServeMux
 	// Store is the backend data access layer (etcd)
-	Store storage.Store
+	Store *storage.Store
 }
 
 // Server ...

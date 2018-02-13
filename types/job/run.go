@@ -3,9 +3,6 @@ package job
 import (
 	"fmt"
 
-	"github.com/byxorna/flow/types/execution"
-	"github.com/byxorna/flow/types/executor"
-	"github.com/byxorna/flow/types/executor/shell"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,6 +13,7 @@ var (
 )
 
 // Run ...
+/*
 func (j *Spec) Run() error {
 	j.running.Lock()
 	defer j.running.Unlock()
@@ -27,9 +25,10 @@ func (j *Spec) Run() error {
 				"namespace": j.Namespace,
 				"job":       j.Name,
 				"schedule":  j.Schedule.String(),
-			}).Debug("scheduler: Run job")
+			}).Debug("enqueuing job")
 
-			// Simple execution wrapper
+
+
 			// TODO: this should get an existing instance if this is a rerun
 			i := execution.NewInstance(j.Namespace, j.Name)
 			// TODO: should enqueue jobs to executors instead, and perform job fit?
@@ -43,13 +42,4 @@ func (j *Spec) Run() error {
 	}
 	return ErrJobDisabled
 }
-
-// GetExecutor ...
-func (j *Spec) GetExecutor() (executor.Executor, error) {
-	switch t := j.Executor; t {
-	case executor.TypeShell:
-		return shell.New(), nil
-	default:
-		return nil, fmt.Errorf("Unsupported executor %v", t)
-	}
-}
+*/

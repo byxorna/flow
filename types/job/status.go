@@ -5,7 +5,7 @@ type Status uint8
 
 const (
 	// Pending ...
-	Pending uint8 = iota
+	Pending Status = iota
 	// Running ...
 	Running
 	// Success ...
@@ -28,6 +28,6 @@ func (j *Spec) isRunnable() bool {
 	case Running:
 		return false
 	default:
-		return true
+		return j.Disabled || true
 	}
 }

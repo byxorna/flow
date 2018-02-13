@@ -21,6 +21,8 @@ import (
 
 var (
 	log = logrus.WithFields(logrus.Fields{"module": "storage"})
+	// ErrSameParent ...
+	ErrSameParent = fmt.Errorf("job cannot be its own parent")
 )
 
 // MaxExecutions is how many executions to retain in the storage backend
@@ -51,7 +53,7 @@ func New(c config.Config) (*Store, error) {
 	keyspace := c.EtcdPrefix
 	cfg := c.ToLibKVConfig()
 
-	s, err := libkv.NewStore(store.Backend(backend), machines, cfg)
+	s, err := libkv.NewStore(store.Backend(backend), machines, &cfg)
 	if err != nil {
 		log.Error(err)
 	}
@@ -71,18 +73,18 @@ func New(c config.Config) (*Store, error) {
 		Client:   s,
 		keyspace: keyspace,
 		backend:  backend,
-	}
+	}, nil
 }
 
 // String returns a string for a Store
 func (s *Store) String() string {
-	return fmt.Sprintf("%s %s %s", s.backend, s.keyspace, s.Client.String())
+	return fmt.Sprintf("%s in %s", s.backend, s.keyspace)
 }
 
 // SetJob Stores a job
 func (s *Store) SetJob(j *job.Spec) error {
 	// Sanitize the job name
-	j.Name = generateSlug(job.Name)
+	j.Name = generateSlug(j.Name)
 	jobKey := j.Path(s.keyspace)
 
 	if err := s.validateJob(j); err != nil {
@@ -118,7 +120,7 @@ func (s *Store) SetJob(j *job.Spec) error {
 		"json": string(jobJSON),
 	}).Debug("store: Setting job")
 
-	err := s.Client.Put(jobKey, jobJSON, nil)
+	err = s.Client.Put(jobKey, jobJSON, nil)
 	return err
 }
 
@@ -273,8 +275,12 @@ func (s *Store) GetExecutions(ns string, name string) ([]*execution.Instance, er
 	for _, node := range res {
 		if store.Backend(s.backend) != store.ZK {
 			path := store.SplitKey(node.Key)
-			dir := path[len(path)-2]
-			if dir != jobName {
+			nsDir := path[len(path)-2]
+			jobDir := path[len(path)-1]
+			if nsDir != ns {
+				continue
+			}
+			if jobDir != name {
 				continue
 			}
 		}
@@ -309,7 +315,7 @@ func (s *Store) GetLastExecutionGroup(ns string, j string) ([]*execution.Instanc
 
 // GetExecutionGroup ...
 func (s *Store) GetExecutionGroup(e *execution.Instance) ([]*execution.Instance, error) {
-	res, err := s.Client.List(execution.Prefix(s.keyspace, e.Namespace, e.Job))
+	res, err := s.Client.List(execution.Path(s.keyspace, e.Namespace, e.Job))
 	if err != nil {
 		return nil, err
 	}
@@ -364,7 +370,7 @@ func (s *Store) SetExecution(e *execution.Instance) (string, error) {
 	err := s.Client.Put(
 		fmt.Sprintf(
 			"%s/%s",
-			execution.Prefix(s.keyspace, e.Namespace, e.Job),
+			execution.Path(s.keyspace, e.Namespace, e.Job),
 			e.ID),
 		exJSON,
 		nil,
@@ -392,7 +398,7 @@ func (s *Store) SetExecution(e *execution.Instance) (string, error) {
 			err := s.Client.Delete(
 				fmt.Sprintf(
 					"%s/%s",
-					execution.Prefix(s.keyspace, execs[i].Namespace, execs[i].Job),
+					execution.Path(s.keyspace, execs[i].Namespace, execs[i].Job),
 					execs[i].ID,
 				),
 			)
@@ -407,7 +413,7 @@ func (s *Store) SetExecution(e *execution.Instance) (string, error) {
 
 // DeleteExecutions Removes all executions of a job
 func (s *Store) DeleteExecutions(ns string, j string) error {
-	return s.Client.DeleteTree(execution.Prefix(s.keyspace, ns, j))
+	return s.Client.DeleteTree(execution.Path(s.keyspace, ns, j))
 }
 
 // GetLeader Retrieve the leader from the store
