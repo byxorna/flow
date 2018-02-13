@@ -4,6 +4,8 @@ package executor
 type Type string
 
 var (
+	// TypeDefault is the default executor type
+	TypeDefault Type
 	// TypeKubernetes ...
 	TypeKubernetes Type = "kubernetes"
 	// TypeMapReduce ...

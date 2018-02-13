@@ -101,7 +101,7 @@ func (j *Spec) Validate() error {
 		}
 	}
 
-	if j.Executor == nil {
+	if j.Executor == executor.TypeDefault {
 		j.Executor = executor.TypeShell
 	}
 	if j.ExecutorParameters == nil {

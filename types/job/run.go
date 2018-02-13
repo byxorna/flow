@@ -9,6 +9,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	// ErrJobDisabled is the error when trying to run a disabled job
+	ErrJobDisabled = fmt.Errorf("job is flagged as disabled")
+	log            = logrus.WithFields(logrus.Fields{"module": "job"})
+)
+
 // Run ...
 func (j *Spec) Run() error {
 	j.running.Lock()
@@ -24,7 +30,9 @@ func (j *Spec) Run() error {
 			}).Debug("scheduler: Run job")
 
 			// Simple execution wrapper
+			// TODO: this should get an existing instance if this is a rerun
 			i := execution.NewInstance(j.Namespace, j.Name)
+			// TODO: should enqueue jobs to executors instead, and perform job fit?
 			exe, err := j.GetExecutor()
 			if err != nil {
 				return err
@@ -33,6 +41,7 @@ func (j *Spec) Run() error {
 		}
 		return nil
 	}
+	return ErrJobDisabled
 }
 
 // GetExecutor ...

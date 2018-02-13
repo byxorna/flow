@@ -59,7 +59,7 @@ func (e *Instance) Key() string {
 }
 */
 
-// String ...
+// String returns a string for this instance
 func (e *Instance) String() string {
 	return fmt.Sprintf("%s/%s:%s", e.Namespace, e.Job, e.ID.String())
 }

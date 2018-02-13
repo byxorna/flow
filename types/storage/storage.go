@@ -262,7 +262,7 @@ func (s *Store) DeleteJob(ns string, name string) (*job.Spec, error) {
 
 // GetExecutions ...
 func (s *Store) GetExecutions(ns string, name string) ([]*execution.Instance, error) {
-	prefix := executions.Path(s.keyspace, ns, name)
+	prefix := execution.Path(s.keyspace, ns, name)
 	res, err := s.Client.List(prefix)
 	if err != nil {
 		return nil, err
@@ -290,7 +290,7 @@ func (s *Store) GetExecutions(ns string, name string) ([]*execution.Instance, er
 
 // GetLastExecutionGroup ...
 func (s *Store) GetLastExecutionGroup(ns string, j string) ([]*execution.Instance, error) {
-	prefix := executions.Path(s.keyspace, ns, j)
+	prefix := execution.Path(s.keyspace, ns, j)
 	res, err := s.Client.List(prefix)
 	if err != nil {
 		return nil, err
@@ -309,7 +309,7 @@ func (s *Store) GetLastExecutionGroup(ns string, j string) ([]*execution.Instanc
 
 // GetExecutionGroup ...
 func (s *Store) GetExecutionGroup(e *execution.Instance) ([]*execution.Instance, error) {
-	res, err := s.Client.List(executions.Prefix(s.keyspace, e.Namespace, e.Job))
+	res, err := s.Client.List(execution.Prefix(s.keyspace, e.Namespace, e.Job))
 	if err != nil {
 		return nil, err
 	}
@@ -364,7 +364,7 @@ func (s *Store) SetExecution(e *execution.Instance) (string, error) {
 	err := s.Client.Put(
 		fmt.Sprintf(
 			"%s/%s",
-			executions.Prefix(s.keyspace, e.Namespace, e.Job),
+			execution.Prefix(s.keyspace, e.Namespace, e.Job),
 			e.ID),
 		exJSON,
 		nil,
@@ -376,6 +376,7 @@ func (s *Store) SetExecution(e *execution.Instance) (string, error) {
 	execs, err := s.GetExecutions(e.Namespace, e.Job)
 	if err != nil {
 		log.Errorf("store: No executions found for job %s/%s", e.Namespace, e.Job)
+		return "", err
 	}
 
 	// Get and ordered array of all execution groups
@@ -391,7 +392,7 @@ func (s *Store) SetExecution(e *execution.Instance) (string, error) {
 			err := s.Client.Delete(
 				fmt.Sprintf(
 					"%s/%s",
-					executions.Prefix(s.keyspace, execs[i].Namespace, execs[i].Job),
+					execution.Prefix(s.keyspace, execs[i].Namespace, execs[i].Job),
 					execs[i].ID,
 				),
 			)
@@ -406,7 +407,7 @@ func (s *Store) SetExecution(e *execution.Instance) (string, error) {
 
 // DeleteExecutions Removes all executions of a job
 func (s *Store) DeleteExecutions(ns string, j string) error {
-	return s.Client.DeleteTree(executions.Prefix(s.keyspace, ns, j))
+	return s.Client.DeleteTree(execution.Prefix(s.keyspace, ns, j))
 }
 
 // GetLeader Retrieve the leader from the store

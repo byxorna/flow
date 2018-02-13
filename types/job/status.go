@@ -22,3 +22,12 @@ func (j *Spec) Status() Status {
 	// and figure out what status it is...
 	return Pending
 }
+
+func (j *Spec) isRunnable() bool {
+	switch status := j.Status(); status {
+	case Running:
+		return false
+	default:
+		return true
+	}
+}
