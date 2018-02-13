@@ -6,10 +6,8 @@ package shell
 import (
 	"fmt"
 	"sync"
-	"time"
 
-	"github.com/byxorna/flow/types/execution"
-	"github.com/byxorna/flow/types/executor"
+	"github.com/byxorna/flow/types"
 	"github.com/byxorna/flow/types/job"
 	"github.com/byxorna/flow/types/storage"
 	"github.com/sirupsen/logrus"
@@ -26,8 +24,9 @@ var (
 // Executor is a shell executor
 type Executor struct {
 	sync.Mutex
-	queue []*job.Spec
-	store *storage.Store
+	queue    []*job.Spec
+	store    *storage.Store
+	Settings Parameters
 }
 
 // Parameters is the type for shell executor parameters
@@ -48,7 +47,7 @@ func New(backend *storage.Store) (*Executor, error) {
 
 	queue := []*job.Spec{}
 	for _, j := range jobs {
-		if j.Executor == executor.TypeShell {
+		if j.Executor == types.ShellExecutor {
 			queue = append(queue, j)
 		}
 	}
@@ -61,14 +60,13 @@ func New(backend *storage.Store) (*Executor, error) {
 		Settings: Parameters{
 			Concurrency: 1,
 		},
-	}
+	}, nil
 }
 
 // Deregister deregisters a job from the queue
-func (e *Executor) Deregister(j *spec.Job) error {
+func (e *Executor) Deregister(j *job.Spec) error {
 	e.Lock()
 	defer e.Unlock()
-	found := false
 	for i, x := range e.queue {
 		if x.ID() == j.ID() {
 			// splice x out of the queue
@@ -80,20 +78,22 @@ func (e *Executor) Deregister(j *spec.Job) error {
 }
 
 // Register registers a job to be processed
-func (e *Executor) Register(j *spec.Job) error {
+func (e *Executor) Register(j *job.Spec) error {
 	e.Lock()
 	defer e.Unlock()
-	if j.Executor == executor.TypeShell {
-		e.queue = append(e.queue, j)
-	} else {
+	if j.Executor != types.ShellExecutor {
 		return ErrWrongExecutor
 	}
+	e.queue = append(e.queue, j)
+	return nil
 }
 
+/*
 // DefaultParameters is the default params for Shell Executors
 func (e *Executor) DefaultParameters() (executor.Parameters, error) {
 	return &Parameters{}, nil
 }
+*/
 
 /*
 // Run executes an instance of a job
@@ -133,13 +133,15 @@ func (e *Executor) Run(instance *execution.Instance) error {
 */
 
 // Type ...
-func (p *Parameters) Type() executor.Type {
-	return executor.TypeShell
+func (p *Parameters) Type() types.Executor {
+	return types.ShellExecutor
 }
 
+/*
 // Params ...
 func (p *Parameters) Params() map[string]string {
 	return map[string]string{
 		"concurrency": p.Concurrency,
 	}
 }
+*/
