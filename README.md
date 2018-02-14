@@ -10,10 +10,15 @@ with the design of airflow, and wanted to try my hand at something
 
 # TODO
 
-- [ ] define job spec schema
+- [ ] launch executors in separate goroutine
+- [ ] send jobs to executors via channel to register
+- [ ] 
+- [ ] 
+- [ ] 
+- [x] define job spec schema
   - [ ] support N instances?
   - [ ] templating job?
-- [ ] define job status
+- [x] define job status
   - [ ] fields for last fire, first fire, completion
 - [ ] define API
   - [ ] job spec submission API

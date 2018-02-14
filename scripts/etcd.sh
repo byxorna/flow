@@ -10,7 +10,9 @@ docker run \
   -p 2380:2380 \
   --name $name \
   quay.io/coreos/etcd:$version \
-  etcd -listen-client-urls=http://0.0.0.0:2379
+  etcd \
+    --listen-client-urls=http://0.0.0.0:2379 \
+    --advertise-client-urls=http://0.0.0.0:2379
 
 
 docker ps

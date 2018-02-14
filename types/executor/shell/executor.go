@@ -6,6 +6,7 @@ package shell
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/byxorna/flow/types"
 	"github.com/byxorna/flow/types/job"
@@ -24,7 +25,8 @@ var (
 // Executor is a shell executor
 type Executor struct {
 	sync.Mutex
-	queue    []*job.Spec
+	running  bool
+	queue    map[string]*job.Spec
 	store    *storage.Store
 	Settings Parameters
 }
@@ -45,10 +47,10 @@ func New(backend *storage.Store) (*Executor, error) {
 		return nil, err
 	}
 
-	queue := []*job.Spec{}
+	queue := map[string]*job.Spec{}
 	for _, j := range jobs {
 		if j.Executor == types.ShellExecutor {
-			queue = append(queue, j)
+			queue[j.ID.String()] = j
 		}
 	}
 
@@ -67,12 +69,9 @@ func New(backend *storage.Store) (*Executor, error) {
 func (e *Executor) Deregister(j *job.Spec) error {
 	e.Lock()
 	defer e.Unlock()
-	for i, x := range e.queue {
-		if x.ID() == j.ID() {
-			// splice x out of the queue
-			e.queue = append(e.queue[:i], e.queue[i+1:]...)
-			return nil
-		}
+	if _, ok := e.queue[j.ID.String()]; ok {
+		delete(e.queue, j.ID.String())
+		return nil
 	}
 	return ErrJobNotFound
 }
@@ -84,7 +83,7 @@ func (e *Executor) Register(j *job.Spec) error {
 	if j.Executor != types.ShellExecutor {
 		return ErrWrongExecutor
 	}
-	e.queue = append(e.queue, j)
+	e.queue[j.ID.String()] = j
 	return nil
 }
 
@@ -137,11 +136,49 @@ func (p *Parameters) Type() types.Executor {
 	return types.ShellExecutor
 }
 
-/*
-// Params ...
-func (p *Parameters) Params() map[string]string {
-	return map[string]string{
-		"concurrency": p.Concurrency,
+// Start runs the executor
+func (e *Executor) Start() {
+	e.Lock()
+	defer e.Unlock()
+	log.Info("Starting executor")
+	e.running = true
+	go e.eventLoop()
+}
+
+// Stop stop the executor
+func (e *Executor) Stop() {
+	e.Lock()
+	defer e.Unlock()
+	log.Info("Stopping executor")
+	e.running = false
+}
+
+func (e *Executor) eventLoop() {
+	ticker := time.NewTicker(1 * time.Second)
+	for {
+		if !e.running {
+			log.Info("Shutting down event loop")
+			return
+		}
+		now := <-ticker.C
+
+		// find what needs to run next
+		runnables := []*job.Spec{}
+		for _, j := range e.queue {
+			if j.ParentJob == nil {
+				next := j.Schedule.Next(now)
+				if now.After(next) {
+					runnables = append(runnables, j)
+				}
+			}
+		}
+
+		if len(runnables) > 0 {
+			log.WithFields(logrus.Fields{"jobs": len(runnables)}).Debug("jobs to run")
+			for _, j := range runnables {
+				log.Infof("running %s", j.ID)
+				// TODO handle the job!
+			}
+		}
 	}
 }
-*/

@@ -4,15 +4,20 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/byxorna/flow/types/job"
 	"github.com/google/uuid"
 )
 
 // Instance is a Job execution instance
 type Instance struct {
-	// Job name of the job this executions refers to.
-	Job string `json:"job_name,omitempty"`
-	// Namespace of the job this executions refers to.
-	Namespace string `json:"namespace,omitempty"`
+	// ID of job
+	Job job.ID `json:"job"`
+	/*
+		// Job name of the job this executions refers to.
+		Job string `json:"job_name,omitempty"`
+		// Namespace of the job this executions refers to.
+		Namespace string `json:"namespace,omitempty"`
+	*/
 
 	// Start time of the execution.
 	StartedAt time.Time `json:"started_at,omitempty"`
@@ -40,26 +45,16 @@ type Instance struct {
 }
 
 // NewInstance returns a new execution.Instance
-func NewInstance(ns string, name string) *Instance {
+func NewInstance(id job.ID) *Instance {
 	return &Instance{
-		Job:       name,
-		Namespace: ns,
-		Group:     time.Now().UnixNano(),
-		Attempt:   1,
-		ID:        uuid.New(),
+		Job:     id,
+		Group:   time.Now().UnixNano(),
+		Attempt: 1,
+		ID:      uuid.New(),
 	}
 }
 
-// Key is the unique instance of this execution
-/*
-func (e *Instance) Key() string {
-	// TODO does this require some randomness? need a UUID?
-	//return fmt.Sprintf("%s-%s-%d", e.Namespace, e.Job, e.StartedAt.UnixNano())
-	return e.UUID.String()
-}
-*/
-
 // String returns a string for this instance
 func (e *Instance) String() string {
-	return fmt.Sprintf("%s/%s:%s", e.Namespace, e.Job, e.ID.String())
+	return fmt.Sprintf("%s/%s:%s", e.Job.Namespace, e.Job.Name, e.ID.String())
 }

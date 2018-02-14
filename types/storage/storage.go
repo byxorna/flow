@@ -21,8 +21,6 @@ import (
 
 var (
 	log = logrus.WithFields(logrus.Fields{"module": "storage"})
-	// ErrSameParent ...
-	ErrSameParent = fmt.Errorf("job cannot be its own parent")
 )
 
 // MaxExecutions is how many executions to retain in the storage backend
@@ -84,15 +82,15 @@ func (s *Store) String() string {
 // SetJob Stores a job
 func (s *Store) SetJob(j *job.Spec) error {
 	// Sanitize the job name
-	j.Name = generateSlug(j.Name)
+	j.ID.Name = generateSlug(j.ID.Name)
 	jobKey := j.Path(s.keyspace)
 
-	if err := s.validateJob(j); err != nil {
+	if err := j.Validate(); err != nil {
 		return err
 	}
 
 	// Get if the requested job already exist
-	ej, err := s.GetJob(j.Namespace, j.Name)
+	ej, err := s.GetJob(j.ID)
 	if err != nil && err != store.ErrKeyNotFound {
 		return err
 	}
@@ -116,8 +114,9 @@ func (s *Store) SetJob(j *job.Spec) error {
 	jobJSON, _ := json.Marshal(j)
 
 	log.WithFields(logrus.Fields{
-		"job":  j.Name,
-		"json": string(jobJSON),
+		"job":       j.ID.Name,
+		"namespace": j.ID.Namespace,
+		"json":      string(jobJSON),
 	}).Debug("store: Setting job")
 
 	err = s.Client.Put(jobKey, jobJSON, nil)
@@ -184,22 +183,6 @@ func (s *Store) SetJobDependencyTree(j *job.Spec, previousJob *job.Spec) error {
 }
 */
 
-func (s *Store) validateJob(j *job.Spec) error {
-	// TODO perform validation on Spec before storage
-	if j.ParentJob == j.Name {
-		return ErrSameParent
-	}
-
-	// Only validate the schedule if it doesn't have a parent
-	if j.ParentJob == "" {
-		if err := j.Schedule.Validate(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // GetJobs returns all jobs
 func (s *Store) GetJobs() ([]*job.Spec, error) {
 	res, err := s.Client.List(s.keyspace + "/" + job.StoragePath + "/")
@@ -224,8 +207,8 @@ func (s *Store) GetJobs() ([]*job.Spec, error) {
 }
 
 // GetJob ...
-func (s *Store) GetJob(ns string, name string) (*job.Spec, error) {
-	res, err := s.Client.Get(job.Prefix(s.keyspace, ns, name))
+func (s *Store) GetJob(id job.ID) (*job.Spec, error) {
+	res, err := s.Client.Get(job.Prefix(s.keyspace, id))
 	if err != nil {
 		return nil, err
 	}
@@ -236,26 +219,27 @@ func (s *Store) GetJob(ns string, name string) (*job.Spec, error) {
 	}
 
 	log.WithFields(logrus.Fields{
-		"job": j.Name,
+		"name":      j.ID.Name,
+		"namespace": j.ID.Namespace,
 	}).Debug("store: Retrieved job from datastore")
 
 	return &j, nil
 }
 
 // DeleteJob ...
-func (s *Store) DeleteJob(ns string, name string) (*job.Spec, error) {
-	j, err := s.GetJob(ns, name)
+func (s *Store) DeleteJob(id job.ID) (*job.Spec, error) {
+	j, err := s.GetJob(id)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.DeleteExecutions(ns, name); err != nil {
+	if err := s.DeleteExecutions(id); err != nil {
 		if err != store.ErrKeyNotFound {
 			return nil, err
 		}
 	}
 
-	if err := s.Client.Delete(job.Prefix(s.keyspace, ns, name)); err != nil {
+	if err := s.Client.Delete(job.Prefix(s.keyspace, id)); err != nil {
 		return nil, err
 	}
 
@@ -263,8 +247,8 @@ func (s *Store) DeleteJob(ns string, name string) (*job.Spec, error) {
 }
 
 // GetExecutions ...
-func (s *Store) GetExecutions(ns string, name string) ([]*execution.Instance, error) {
-	prefix := execution.Path(s.keyspace, ns, name)
+func (s *Store) GetExecutions(id job.ID) ([]*execution.Instance, error) {
+	prefix := execution.Path(s.keyspace, id)
 	res, err := s.Client.List(prefix)
 	if err != nil {
 		return nil, err
@@ -277,10 +261,10 @@ func (s *Store) GetExecutions(ns string, name string) ([]*execution.Instance, er
 			path := store.SplitKey(node.Key)
 			nsDir := path[len(path)-2]
 			jobDir := path[len(path)-1]
-			if nsDir != ns {
+			if nsDir != id.Namespace {
 				continue
 			}
-			if jobDir != name {
+			if jobDir != id.Name {
 				continue
 			}
 		}
@@ -295,8 +279,8 @@ func (s *Store) GetExecutions(ns string, name string) ([]*execution.Instance, er
 }
 
 // GetLastExecutionGroup ...
-func (s *Store) GetLastExecutionGroup(ns string, j string) ([]*execution.Instance, error) {
-	prefix := execution.Path(s.keyspace, ns, j)
+func (s *Store) GetLastExecutionGroup(id job.ID) ([]*execution.Instance, error) {
+	prefix := execution.Path(s.keyspace, id)
 	res, err := s.Client.List(prefix)
 	if err != nil {
 		return nil, err
@@ -315,7 +299,7 @@ func (s *Store) GetLastExecutionGroup(ns string, j string) ([]*execution.Instanc
 
 // GetExecutionGroup ...
 func (s *Store) GetExecutionGroup(e *execution.Instance) ([]*execution.Instance, error) {
-	res, err := s.Client.List(execution.Path(s.keyspace, e.Namespace, e.Job))
+	res, err := s.Client.List(execution.Path(s.keyspace, e.Job))
 	if err != nil {
 		return nil, err
 	}
@@ -337,8 +321,8 @@ func (s *Store) GetExecutionGroup(e *execution.Instance) ([]*execution.Instance,
 
 // GetGroupedExecutions Returns executions for a job grouped and with an ordered index
 // to facilitate access.
-func (s *Store) GetGroupedExecutions(ns string, j string) (map[int64][]*execution.Instance, []int64, error) {
-	execs, err := s.GetExecutions(ns, j)
+func (s *Store) GetGroupedExecutions(id job.ID) (map[int64][]*execution.Instance, []int64, error) {
+	execs, err := s.GetExecutions(id)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -362,15 +346,15 @@ func (s *Store) SetExecution(e *execution.Instance) (string, error) {
 	exJSON, _ := json.Marshal(e)
 
 	log.WithFields(logrus.Fields{
-		"job":       e.Job,
-		"namespace": e.Namespace,
+		"job":       e.Job.Name,
+		"namespace": e.Job.Namespace,
 		"key":       e.ID,
-	}).Debug("store: Setting key")
+	}).Debug("store: Setting execution instance")
 
 	err := s.Client.Put(
 		fmt.Sprintf(
 			"%s/%s",
-			execution.Path(s.keyspace, e.Namespace, e.Job),
+			execution.Path(s.keyspace, e.Job),
 			e.ID),
 		exJSON,
 		nil,
@@ -379,9 +363,9 @@ func (s *Store) SetExecution(e *execution.Instance) (string, error) {
 		return "", err
 	}
 
-	execs, err := s.GetExecutions(e.Namespace, e.Job)
+	execs, err := s.GetExecutions(e.Job)
 	if err != nil {
-		log.Errorf("store: No executions found for job %s/%s", e.Namespace, e.Job)
+		log.Errorf("store: No executions found for job %s", e.Job)
 		return "", err
 	}
 
@@ -398,7 +382,7 @@ func (s *Store) SetExecution(e *execution.Instance) (string, error) {
 			err := s.Client.Delete(
 				fmt.Sprintf(
 					"%s/%s",
-					execution.Path(s.keyspace, execs[i].Namespace, execs[i].Job),
+					execution.Path(s.keyspace, execs[i].Job),
 					execs[i].ID,
 				),
 			)
@@ -412,8 +396,8 @@ func (s *Store) SetExecution(e *execution.Instance) (string, error) {
 }
 
 // DeleteExecutions Removes all executions of a job
-func (s *Store) DeleteExecutions(ns string, j string) error {
-	return s.Client.DeleteTree(execution.Path(s.keyspace, ns, j))
+func (s *Store) DeleteExecutions(id job.ID) error {
+	return s.Client.DeleteTree(execution.Path(s.keyspace, id))
 }
 
 // GetLeader Retrieve the leader from the store

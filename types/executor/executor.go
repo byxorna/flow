@@ -10,4 +10,6 @@ type Executor interface {
 	Deregister(job *job.Spec) error
 	String() string
 	//	DefaultParameters() (Parameters, error)
+	Start()
+	Stop()
 }

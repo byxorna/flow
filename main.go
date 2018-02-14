@@ -53,6 +53,9 @@ func main() {
 	// register executors with server
 	s.RegisterShellExecutor(shellExecutor)
 
+	//TODO: launch all executors via .Start()
+	shellExecutor.Start()
+
 	// now start handling traffic
 	log.Info("server starting up")
 	log.Fatal(s.ListenAndServe())
