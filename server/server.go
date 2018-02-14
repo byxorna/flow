@@ -18,17 +18,17 @@ var (
 )
 
 // for middleware logging
-type loggingResponseWriter struct {
+type responseLogger struct {
 	http.ResponseWriter
 	statusCode int
 	timeStart  time.Time
 	duration   time.Duration
 }
 
-func (lrw loggingResponseWriter) WriteHeader(code int) {
-	lrw.statusCode = code
-	lrw.ResponseWriter.WriteHeader(code)
-	lrw.duration = time.Since(lrw.timeStart)
+func (rl responseLogger) WriteHeader(code int) {
+	rl.statusCode = code
+	rl.ResponseWriter.WriteHeader(code)
+	rl.duration = time.Since(rl.timeStart)
 }
 
 type svr struct {
@@ -63,8 +63,8 @@ func New(c config.Config, store *storage.Store) (Server, error) {
 	}
 
 	// register http handlers
-	mux.HandleFunc("/", s.handleVersion)
-	mux.HandleFunc("/v1/jobs", s.handleJobs)
+	mux.HandleFunc("/", s.getVersion)
+	mux.HandleFunc("/v1/jobs", s.getJobs)
 
 	return &s, nil
 }
@@ -80,7 +80,7 @@ func (s *svr) ListenAndServe() error {
 	)
 }
 
-func (s *svr) handleVersion(w http.ResponseWriter, r *http.Request) {
+func (s *svr) getVersion(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(
 		w,
 		fmt.Sprintf(
@@ -95,7 +95,7 @@ func (s *svr) handleVersion(w http.ResponseWriter, r *http.Request) {
 
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		lrw := loggingResponseWriter{
+		rl := responseLogger{
 			ResponseWriter: w,
 			statusCode:     http.StatusOK,
 			timeStart:      time.Now(),
@@ -107,12 +107,12 @@ func logRequest(handler http.Handler) http.Handler {
 				"url":        r.URL,
 			},
 		).Infof("HTTP request received")
-		handler.ServeHTTP(lrw, r)
+		handler.ServeHTTP(rl, r)
 		log.WithFields(
 			logrus.Fields{
-				"status":     lrw.statusCode,
-				"statustext": http.StatusText(lrw.statusCode),
-				"duration":   lrw.duration.String(),
+				"status":     rl.statusCode,
+				"statustext": http.StatusText(rl.statusCode),
+				"duration":   rl.duration.String(),
 			},
 		).Infof("HTTP response")
 	})

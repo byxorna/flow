@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func (s *svr) handleJobs(w http.ResponseWriter, r *http.Request) {
+func (s *svr) getJobs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	jobs, err := s.store.GetJobs()
 	if err != nil {
