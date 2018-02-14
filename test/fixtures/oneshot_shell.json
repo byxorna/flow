@@ -1,0 +1,13 @@
+{
+  "id": {
+    "name": "oneshot",
+    "namespace": "gabe"
+  },
+  "schedule": {
+    "date": "...."
+  },
+  "executor": "shell",
+  "executor_parameters": {
+    "command": "date -u"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "id": {
+    "name": "recurring1",
+    "namespace": "gabe"
+  },
+  "schedule": {
+    "period": "...."
+  },
+  "executor": "shell",
+  "executor_parameters": {
+    "command": "date -u"
+  }
+}
