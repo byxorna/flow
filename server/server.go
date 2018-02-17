@@ -65,12 +65,12 @@ func New(c config.Config, store *storage.Store) (Server, error) {
 
 	// register http handlers
 	s.router.HandleFunc("/", s.getVersion)
-	v1api := s.router.PathPrefix("/v1/").Subrouter()
-	v1api.Path("jobs").Methods("GET").
+	v1api := s.router.PathPrefix("/v1").Subrouter()
+	v1api.Path("/jobs").Methods("GET").
 		HandlerFunc(s.jobs)
-	v1api.Path("job").Methods("POST").
+	v1api.Path("/job").Methods("POST").
 		HandlerFunc(s.postJob)
-	v1api.Path("job/{namespace}/{name}").Methods("GET", "DELETE").
+	v1api.Path("/job/{namespace}/{name}").Methods("GET", "DELETE").
 		HandlerFunc(s.job)
 
 	return &s, nil
