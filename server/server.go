@@ -10,6 +10,7 @@ import (
 	"github.com/byxorna/flow/types/executor/shell"
 	"github.com/byxorna/flow/types/storage"
 	"github.com/byxorna/flow/version"
+	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,7 +34,7 @@ func (rl responseLogger) WriteHeader(code int) {
 
 type svr struct {
 	config.Config
-	mux *http.ServeMux
+	router *mux.Router
 	// Store is the backend data access layer (etcd)
 	store *storage.Store
 
@@ -54,17 +55,23 @@ func (s *svr) RegisterShellExecutor(e *shell.Executor) {
 
 // New returns a new server
 func New(c config.Config, store *storage.Store) (Server, error) {
-	mux := http.NewServeMux()
+	router := mux.NewRouter()
 
 	s := svr{
 		Config: c,
-		mux:    mux,
+		router: router,
 		store:  store,
 	}
 
 	// register http handlers
-	mux.HandleFunc("/", s.getVersion)
-	mux.HandleFunc("/v1/jobs", s.getJobs)
+	s.router.HandleFunc("/", s.getVersion)
+	v1api := s.router.PathPrefix("/v1/").Subrouter()
+	v1api.Path("jobs").Methods("GET").
+		HandlerFunc(s.jobs)
+	v1api.Path("job").Methods("POST").
+		HandlerFunc(s.postJob)
+	v1api.Path("job/{namespace}/{name}").Methods("GET", "DELETE").
+		HandlerFunc(s.job)
 
 	return &s, nil
 }
@@ -76,7 +83,7 @@ func (s *svr) ListenAndServe() error {
 	).Infof("Listening for HTTP requests")
 	return http.ListenAndServe(
 		s.ServerListenAddr,
-		logRequest(s.mux),
+		logRequest(s.router),
 	)
 }
 

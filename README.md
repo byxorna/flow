@@ -10,8 +10,8 @@ with the design of airflow, and wanted to try my hand at something
 
 # TODO
 
-- [ ] launch executors in separate goroutine
-- [ ] send jobs to executors via channel to register
+- [x] launch executors in separate goroutine
+- [x] send jobs to executors via channel to register
 - [ ] 
 - [ ] 
 - [ ] 
