@@ -19,6 +19,8 @@ var (
 	ErrRequiresSchedule = fmt.Errorf("job requires either a parent job or a schedule")
 	// ErrSameParent ...
 	ErrSameParent = fmt.Errorf("job cannot be its own parent")
+	// ErrOwnerRequired ...
+	ErrOwnerRequired = fmt.Errorf("job requires an owner")
 )
 
 // Spec is a Job specification that is provided via API
@@ -34,13 +36,10 @@ type Spec struct {
 	Disabled bool `json:"disabled"`
 
 	// EnvVars are extra env vars to inject into job
-	EnvVars map[string]string `json:"env_vars"`
+	EnvVars map[string]string `json:"env_vars,omitempty"`
 
 	// Owner of the job.
 	Owner string `json:"owner"`
-
-	// Owner email of the job.
-	OwnerEmail string `json:"owner_email"`
 
 	// Number of successful executions of this job.
 	SuccessCount int `json:"success_count"`
@@ -62,34 +61,43 @@ type Spec struct {
 
 	// Schedule is the desired run schedule
 	ScheduleString string        `json:"schedule,omitempty"`
-	Schedule       cron.Schedule // parse schedule into a Schedule at validation
+	scheduleFUCK   cron.Schedule // parse schedule into a Schedule at validation
 
 	// Executor is Which executor to require (if any)
 	Executor types.Executor `json:"executor"`
 
 	// ExecutorParameters are attributes passed to executor to define execution
 	// like docker image, entrypoint, memory parameters, etc
-	ExecutorParameters map[string]string `json:"executor_parameters"`
+	ExecutorParameters map[string]string `json:"executor_parameters,omitempty"`
 
 	// ExecutorConstraints are labels that need satisfied by executor to run this job
 	// i.e. specific OS, kernel attributes, etc
-	ExecutorConstraints map[string]string `json:"constraints"`
+	ExecutorConstraints map[string]string `json:"constraints,omitempty"`
 
 	// Labels are labels to identify this job
-	Labels map[string]string `json:"labels"`
+	Labels map[string]string `json:"labels,omitempty"`
 
 	running sync.Mutex
 }
 
 // String is a string rep of a job
 func (j *Spec) String() string {
-	return fmt.Sprintf("Job %s scheduled at %s with executor %s and labels %v", j.ID, j.Schedule, j.Executor, j.Labels)
+	return fmt.Sprintf("Job %s scheduled at %s with executor %s and labels %v", j.ID, j.scheduleFUCK, j.Executor, j.Labels)
+}
+
+// Schedule returns the schedule
+func (j *Spec) Schedule() cron.Schedule {
+	return j.scheduleFUCK
 }
 
 // Validate processes a Spec, sets default fields as necessary, and explodes if there is a validation error
 func (j *Spec) Validate() error {
 	if j.ParentJob != nil && *j.ParentJob == j.ID {
 		return ErrSameParent
+	}
+
+	if j.Owner == "" {
+		return ErrOwnerRequired
 	}
 
 	if j.ScheduleString != "" {
@@ -101,12 +109,12 @@ func (j *Spec) Validate() error {
 		if err != nil {
 			return fmt.Errorf("unable to parse schedule %s", j.ScheduleString)
 		}
-		j.Schedule = s
+		j.scheduleFUCK = s
 	}
 
 	if j.ParentJob == nil {
 		// require a Schedule
-		if j.ScheduleString == "" || j.Schedule == nil {
+		if j.ScheduleString == "" || j.scheduleFUCK == nil {
 			return ErrRequiresSchedule
 		}
 	}

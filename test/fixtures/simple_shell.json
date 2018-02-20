@@ -1,8 +1,9 @@
 {
   "id": {
     "name": "simple-recurring-1",
-    "namespace": "gabe"
+    "namespace": "sre"
   },
+  "owner": "gabe",
   "schedule": "@every 1h0s",
   "executor": "shell",
   "executor_parameters": {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/docker/libkv"
 	"github.com/docker/libkv/store"
@@ -189,34 +190,64 @@ func (s *Store) SetJobDependencyTree(j *job.Spec, previousJob *job.Spec) error {
 */
 
 // GetJobs returns all jobs
+// TODO: make namespace optional!
 func (s *Store) GetJobs() ([]*job.Spec, error) {
-	log.Debugf("fetching keyspace %s/%s/", s.keyspace, job.StoragePath)
-	res, err := s.Client.List(s.keyspace + "/" + job.StoragePath + "/")
+	// first, get all namespaces!
+	path := fmt.Sprintf("%s/%s/", s.keyspace, job.StoragePath)
+	log.Debugf("fetching namespaces from path %s", path)
+	namespaceKeys, err := s.Client.List(path)
 	if err != nil {
 		if err == store.ErrKeyNotFound {
-			log.Debug("store: No jobs found")
+			log.Debugf("store: No namespaces found at %s", path)
 			return []*job.Spec{}, nil
 		}
 		return nil, err
 	}
-	log.Debugf("got res %s", res)
+	namespaces := make([]string, len(namespaceKeys))
+	for i, e := range namespaceKeys {
+		namespaces[i] = e.Key
+	}
+	log.WithFields(logrus.Fields{"path": path, "num": len(namespaces)}).
+		Debugf("got %d namespaces from %s", len(namespaces), path)
 
 	jobs := make([]*job.Spec, 0)
-	for _, node := range res {
-		var j job.Spec
-		log.Infof("attempting to unmarshal %s as Job", node.Value)
-		err := json.Unmarshal([]byte(node.Value), &j)
+	for _, nspath := range namespaces {
+		parts := strings.Split(nspath, "/")
+		ns := parts[len(parts)-1]
+		log.WithFields(logrus.Fields{"namespace": ns}).Debugf("fetching jobs")
+		jobEntries, err := s.Client.List(nspath)
 		if err != nil {
+			if err == store.ErrKeyNotFound {
+				log.Debugf("store: No jobs found at %s", nspath)
+				// just carry on
+				continue
+			}
 			return nil, err
 		}
-		jobs = append(jobs, &j)
+		log.WithFields(logrus.Fields{"namespace": ns}).
+			Debugf("got %d jobs from %s", len(jobEntries), path)
+
+		for _, entry := range jobEntries {
+			log.Debugf("deserializing %s contents", entry.Key)
+			if len(entry.Value) == 0 {
+				return nil, fmt.Errorf("key %s has no content for its value", entry.Key)
+			}
+			var j job.Spec
+			log.Debugf("attempting to unmarshal key %v '%s' as Job", entry.Key, string(entry.Value))
+			err := json.Unmarshal([]byte(entry.Value), &j)
+			if err != nil {
+				return nil, err
+			}
+			jobs = append(jobs, &j)
+		}
 	}
 	return jobs, nil
 }
 
 // GetJob ...
 func (s *Store) GetJob(id job.ID) (*job.Spec, error) {
-	res, err := s.Client.Get(job.Prefix(s.keyspace, id))
+	path := job.Prefix(s.keyspace, id)
+	res, err := s.Client.Get(path)
 	if err != nil {
 		return nil, err
 	}

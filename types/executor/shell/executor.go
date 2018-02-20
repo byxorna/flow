@@ -166,7 +166,7 @@ func (e *Executor) eventLoop() {
 		runnables := []*job.Spec{}
 		for _, j := range e.queue {
 			if j.ParentJob == nil {
-				next := j.Schedule.Next(now)
+				next := j.Schedule().Next(now)
 				if now.After(next) {
 					runnables = append(runnables, j)
 				}
