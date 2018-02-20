@@ -92,6 +92,11 @@
   revision = "b8bc1bf767474819792c23f32d8286a45736f1c6"
 
 [[projects]]
+  name = "github.com/robfig/cron"
+  packages = ["."]
+  revision = "2315d5715e36303a941d907f038da7f7c44c773b"
+
+[[projects]]
   branch = "master"
   name = "github.com/samuel/go-zookeeper"
   packages = ["zk"]
@@ -139,6 +144,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "06af4e27d34ed11f1be7647131e227394c31012230f54b2a3b216e7d9307190c"
+  inputs-digest = "f5120b5a1e8cf34a5c292d08980bcd9edf268aa93f6c88929aa5d5cca6ca5a1c"
   solver-name = "gps-cdcl"
   solver-version = 1

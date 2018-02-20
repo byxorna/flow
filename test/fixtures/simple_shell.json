@@ -1,10 +1,10 @@
 {
   "id": {
-    "name": "recurring1",
+    "name": "simple-recurring-1",
     "namespace": "gabe"
   },
   "schedule": {
-    "period": "...."
+    "period": "1h0s"
   },
   "executor": "shell",
   "executor_parameters": {

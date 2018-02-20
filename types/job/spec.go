@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/byxorna/flow/types"
-	"github.com/byxorna/flow/types/schedule"
+	"github.com/robfig/cron"
 )
 
 const (
@@ -61,7 +61,8 @@ type Spec struct {
 	ParentJob *ID `json:"parent_job,omitempty"`
 
 	// Schedule is the desired run schedule
-	Schedule schedule.Schedule `json:"schedule,omitempty"`
+	ScheduleString string        `json:"schedule,omitempty"`
+	Schedule       cron.Schedule // parse schedule into a Schedule at validation
 
 	// Executor is Which executor to require (if any)
 	Executor types.Executor `json:"executor"`
@@ -82,7 +83,7 @@ type Spec struct {
 
 // String is a string rep of a job
 func (j *Spec) String() string {
-	return fmt.Sprintf("Job %s scheduled at %s with executor %s and labels %v", j.ID, j.Schedule.String(), j.Executor, j.Labels)
+	return fmt.Sprintf("Job %s scheduled at %s with executor %s and labels %v", j.ID, j.Schedule, j.Executor, j.Labels)
 }
 
 // Validate processes a Spec, sets default fields as necessary, and explodes if there is a validation error
@@ -92,7 +93,7 @@ func (j *Spec) Validate() error {
 	}
 	if j.ParentJob == nil {
 		// require a Schedule
-		if j.Schedule == nil {
+		if j.ScheduleString == "" || j.Schedule == nil {
 			return ErrRequiresSchedule
 		}
 	}
@@ -100,6 +101,17 @@ func (j *Spec) Validate() error {
 	if j.Executor == types.DefaultExecutor {
 		return fmt.Errorf("must specify an explicit executor")
 	}
+
+	// because Schedule is a string, parse it into a cron.Schedule
+	cronParser := cron.NewParser(
+		cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.DowOptional | cron.Descriptor,
+	)
+	s, err := cronParser.Parse(j.ScheduleString)
+	if err != nil {
+		return fmt.Errorf("unable to parse schedule %s", j.ScheduleString)
+	}
+	j.Schedule = s
+
 	return nil
 }
 
