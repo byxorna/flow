@@ -48,7 +48,11 @@ func New(c config.Config) (*Store, error) {
 	//TODO update this if we wanna support multiple backends. For now, idgaf
 	backend := store.ETCD
 	machines := c.EtcdEndpoints
-	keyspace := c.EtcdPrefix
+	keyspace := ""
+	if c.EtcdPrefix != "/" {
+		// "" is fine for keyspace if we have a default prefix to make joining work
+		keyspace = c.EtcdPrefix
+	}
 	cfg := c.ToLibKVConfig()
 
 	s, err := libkv.NewStore(store.Backend(backend), machines, &cfg)
@@ -84,6 +88,7 @@ func (s *Store) SetJob(j *job.Spec) error {
 	// Sanitize the job name
 	j.ID.Name = generateSlug(j.ID.Name)
 	jobKey := j.Path(s.keyspace)
+	log.Debug("Storing %s to %s", j.ID, jobKey)
 
 	if err := j.Validate(); err != nil {
 		return err
@@ -185,6 +190,7 @@ func (s *Store) SetJobDependencyTree(j *job.Spec, previousJob *job.Spec) error {
 
 // GetJobs returns all jobs
 func (s *Store) GetJobs() ([]*job.Spec, error) {
+	log.Debugf("fetching keyspace %s/%s/", s.keyspace, job.StoragePath)
 	res, err := s.Client.List(s.keyspace + "/" + job.StoragePath + "/")
 	if err != nil {
 		if err == store.ErrKeyNotFound {
@@ -193,10 +199,12 @@ func (s *Store) GetJobs() ([]*job.Spec, error) {
 		}
 		return nil, err
 	}
+	log.Debugf("got res %s", res)
 
 	jobs := make([]*job.Spec, 0)
 	for _, node := range res {
 		var j job.Spec
+		log.Infof("attempting to unmarshal %s as Job", node.Value)
 		err := json.Unmarshal([]byte(node.Value), &j)
 		if err != nil {
 			return nil, err

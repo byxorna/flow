@@ -3,7 +3,7 @@
     "name": "simple-recurring-1",
     "namespace": "gabe"
   },
-  "schedule": "1h0s",
+  "schedule": "@every 1h0s",
   "executor": "shell",
   "executor_parameters": {
     "command": "date -u"
