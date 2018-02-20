@@ -66,6 +66,8 @@ func New(c config.Config, store *storage.Store) (Server, error) {
 	// register http handlers
 	s.router.HandleFunc("/", s.getVersion)
 	v1api := s.router.PathPrefix("/v1").Subrouter()
+	v1api.Path("/jobs/{namespace}").Methods("GET").
+		HandlerFunc(s.jobs)
 	v1api.Path("/jobs").Methods("GET").
 		HandlerFunc(s.jobs)
 	v1api.Path("/job").Methods("POST").

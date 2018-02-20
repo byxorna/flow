@@ -17,7 +17,9 @@ func (s *svr) jobs(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	jobs, err := s.store.GetJobs()
+	vars := mux.Vars(r)
+	namespace := vars["namespace"]
+	jobs, err := s.store.GetJobs(namespace)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(errorJSON(err))

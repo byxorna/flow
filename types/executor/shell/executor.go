@@ -42,7 +42,7 @@ type Parameters struct {
 func New(backend *storage.Store) (*Executor, error) {
 
 	log.Debug("loading all jobs")
-	jobs, err := backend.GetJobs()
+	jobs, err := backend.GetJobs("")
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +165,14 @@ func (e *Executor) eventLoop() {
 		// find what needs to run next
 		runnables := []*job.Spec{}
 		for _, j := range e.queue {
-			if j.ParentJob == nil {
+			log.WithFields(logrus.Fields{"job": j.ID.Name, "namespace": j.ID.Namespace}).Debug("evaluating if we should run job")
+			if j.Schedule() != nil {
+				log.WithFields(logrus.Fields{
+					"job":       j.ID.Name,
+					"namespace": j.ID.Namespace,
+					"schedule":  j.Schedule(),
+				}).
+					Debug("job has a schedule")
 				next := j.Schedule().Next(now)
 				if now.After(next) {
 					runnables = append(runnables, j)

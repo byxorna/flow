@@ -190,25 +190,33 @@ func (s *Store) SetJobDependencyTree(j *job.Spec, previousJob *job.Spec) error {
 */
 
 // GetJobs returns all jobs
-// TODO: make namespace optional!
-func (s *Store) GetJobs() ([]*job.Spec, error) {
-	// first, get all namespaces!
-	path := fmt.Sprintf("%s/%s/", s.keyspace, job.StoragePath)
-	log.Debugf("fetching namespaces from path %s", path)
-	namespaceKeys, err := s.Client.List(path)
-	if err != nil {
-		if err == store.ErrKeyNotFound {
-			log.Debugf("store: No namespaces found at %s", path)
-			return []*job.Spec{}, nil
+// if namespace is "", returns ALL jobs. Otherwise, returns only
+// jobs for the specified namespace.
+func (s *Store) GetJobs(namespace string) ([]*job.Spec, error) {
+	var namespaces []string
+	if namespace != "" {
+		namespaces = make([]string, 1)
+		namespaces[0] = fmt.Sprintf("%s/%s/%s", s.keyspace, job.StoragePath, namespace)
+	} else {
+		// lookup all namespaces,
+		path := fmt.Sprintf("%s/%s/", s.keyspace, job.StoragePath)
+		log.Debugf("fetching namespaces from path %s", path)
+		namespaceKeys, err := s.Client.List(path)
+		if err != nil {
+			if err == store.ErrKeyNotFound {
+				log.Debugf("store: No namespaces found at %s", path)
+				return []*job.Spec{}, nil
+			}
+			return nil, err
 		}
-		return nil, err
+		namespaces = make([]string, len(namespaceKeys))
+		for i, e := range namespaceKeys {
+			namespaces[i] = e.Key
+		}
+		log.WithFields(logrus.Fields{"path": path, "num": len(namespaces)}).
+			Debugf("got %d namespaces from %s", len(namespaces), path)
+
 	}
-	namespaces := make([]string, len(namespaceKeys))
-	for i, e := range namespaceKeys {
-		namespaces[i] = e.Key
-	}
-	log.WithFields(logrus.Fields{"path": path, "num": len(namespaces)}).
-		Debugf("got %d namespaces from %s", len(namespaces), path)
 
 	jobs := make([]*job.Spec, 0)
 	for _, nspath := range namespaces {
@@ -225,7 +233,7 @@ func (s *Store) GetJobs() ([]*job.Spec, error) {
 			return nil, err
 		}
 		log.WithFields(logrus.Fields{"namespace": ns}).
-			Debugf("got %d jobs from %s", len(jobEntries), path)
+			Debugf("got %d jobs from %s", len(jobEntries), nspath)
 
 		for _, entry := range jobEntries {
 			log.Debugf("deserializing %s contents", entry.Key)
