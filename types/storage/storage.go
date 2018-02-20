@@ -249,6 +249,13 @@ func (s *Store) GetJobs(namespace string) ([]*job.Spec, error) {
 			jobs = append(jobs, &j)
 		}
 	}
+
+	// now ensure those jobs are validated!
+	for _, j := range jobs {
+		if err := j.Validate(); err != nil {
+			return nil, err
+		}
+	}
 	return jobs, nil
 }
 
@@ -269,6 +276,11 @@ func (s *Store) GetJob(id job.ID) (*job.Spec, error) {
 		"name":      j.ID.Name,
 		"namespace": j.ID.Namespace,
 	}).Debug("store: Retrieved job from datastore")
+
+	// now ensure job is valid!
+	if err := j.Validate(); err != nil {
+		return nil, err
+	}
 
 	return &j, nil
 }

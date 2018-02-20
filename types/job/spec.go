@@ -110,6 +110,7 @@ func (j *Spec) Validate() error {
 			return fmt.Errorf("unable to parse schedule %s", j.ScheduleString)
 		}
 		j.scheduleFUCK = s
+		log.Infof("Setting schedule %s", j.scheduleFUCK)
 	}
 
 	if j.ParentJob == nil {
