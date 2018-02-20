@@ -26,7 +26,7 @@ type responseLogger struct {
 	duration   time.Duration
 }
 
-func (rl responseLogger) WriteHeader(code int) {
+func (rl *responseLogger) WriteHeader(code int) {
 	rl.statusCode = code
 	rl.ResponseWriter.WriteHeader(code)
 	rl.duration = time.Since(rl.timeStart)
@@ -100,13 +100,8 @@ func (s *svr) getVersion(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func logRequest(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rl := responseLogger{
-			ResponseWriter: w,
-			statusCode:     http.StatusOK,
-			timeStart:      time.Now(),
-		}
+func logRequest(next http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		log.WithFields(
 			logrus.Fields{
 				"remoteaddr": r.RemoteAddr,
@@ -114,7 +109,11 @@ func logRequest(handler http.Handler) http.Handler {
 				"url":        r.URL,
 			},
 		).Infof("HTTP request received")
-		handler.ServeHTTP(rl, r)
+		rl := responseLogger{
+			ResponseWriter: w,
+			timeStart:      time.Now(),
+		}
+		next.ServeHTTP(&rl, r)
 		log.WithFields(
 			logrus.Fields{
 				"status":     rl.statusCode,
@@ -122,5 +121,5 @@ func logRequest(handler http.Handler) http.Handler {
 				"duration":   rl.duration.String(),
 			},
 		).Infof("HTTP response")
-	})
+	}
 }

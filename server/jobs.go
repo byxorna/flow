@@ -66,7 +66,6 @@ func (s *svr) job(w http.ResponseWriter, r *http.Request) {
 
 func (s *svr) postJob(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
 	var j job.Spec
 	var err error
 	switch r.Header.Get("Content-Type") {

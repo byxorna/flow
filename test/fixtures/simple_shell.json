@@ -3,9 +3,7 @@
     "name": "simple-recurring-1",
     "namespace": "gabe"
   },
-  "schedule": {
-    "period": "1h0s"
-  },
+  "schedule": "1h0s",
   "executor": "shell",
   "executor_parameters": {
     "command": "date -u"

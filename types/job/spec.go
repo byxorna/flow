@@ -91,6 +91,19 @@ func (j *Spec) Validate() error {
 	if j.ParentJob != nil && *j.ParentJob == j.ID {
 		return ErrSameParent
 	}
+
+	if j.ScheduleString != "" {
+		// because Schedule is a string, parse it into a cron.Schedule
+		cronParser := cron.NewParser(
+			cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.DowOptional | cron.Descriptor,
+		)
+		s, err := cronParser.Parse(j.ScheduleString)
+		if err != nil {
+			return fmt.Errorf("unable to parse schedule %s", j.ScheduleString)
+		}
+		j.Schedule = s
+	}
+
 	if j.ParentJob == nil {
 		// require a Schedule
 		if j.ScheduleString == "" || j.Schedule == nil {
@@ -101,16 +114,6 @@ func (j *Spec) Validate() error {
 	if j.Executor == types.DefaultExecutor {
 		return fmt.Errorf("must specify an explicit executor")
 	}
-
-	// because Schedule is a string, parse it into a cron.Schedule
-	cronParser := cron.NewParser(
-		cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.DowOptional | cron.Descriptor,
-	)
-	s, err := cronParser.Parse(j.ScheduleString)
-	if err != nil {
-		return fmt.Errorf("unable to parse schedule %s", j.ScheduleString)
-	}
-	j.Schedule = s
 
 	return nil
 }

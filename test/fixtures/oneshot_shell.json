@@ -3,9 +3,7 @@
     "name": "oneshot",
     "namespace": "gabe"
   },
-  "schedule": {
-    "date": "2018-02-19T17:06:32-05:00"
-  },
+  "schedule": "2018-02-19T17:06:32-05:00",
   "executor": "shell",
   "executor_parameters": {
     "command": "date -u"
